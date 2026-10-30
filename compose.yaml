@@ -1,0 +1,49 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: userscore
+      MYSQL_USER: userscore
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD no arquivo .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  score-api:
+    build:
+      context: .
+      args: { MODULE: score-api }
+    ports: ["127.0.0.1:8081:8081"]
+  user-api:
+    build:
+      context: .
+      args: { MODULE: user-api }
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      USER_SCORE_JDBC_URL: jdbc:mysql://db:3306/userscore?allowPublicKeyRetrieval=true&useSSL=false
+      MYSQL_USERNAME: userscore
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Defina MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      SCORE_API_URL: http://score-api:8081/score
+      VIACEP_URL: https://viacep.com.br/ws/
+      ENVIAR_EMAIL: "false"
+    volumes: ["reports:/app/data"]
+    depends_on:
+      db: { condition: service_healthy }
+      score-api: { condition: service_started }
+  web:
+    build:
+      context: .
+      args: { MODULE: web }
+    ports: ["127.0.0.1:8082:8082"]
+    environment:
+      USER_SCORE_BASE_URL: http://user-api:8080
+    depends_on: [user-api]
+volumes:
+  mysql-data:
+  reports:

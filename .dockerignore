@@ -1,0 +1,10 @@
+.git
+**/target
+**/logs
+**/data
+.env
+.devkit
+.devkit.yml
+.codex
+.agents
+AGENTS.md
